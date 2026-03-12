@@ -1,73 +1,106 @@
-import { useState, useEffect } from 'react'
-import { calculerIS, type ISInput } from './lib/is'
-import './app.css'
+import { useState, useEffect } from "react";
+import { calculerIS, type ISInput } from "./lib/is";
+import "./app.css";
 
 const EXAMPLE: Record<string, string> = {
-  CA: '40000000',
-  charges_eligibles: '1950000',
-  acomptes_payes: '700000',
-  minimum_perception: '1200000',
-  acompte_N: '',
-}
+  CA: "40000000",
+  charges_eligibles: "1950000",
+  acomptes_payes: "700000",
+  minimum_perception: "1200000",
+  acompte_N: "",
+};
 
 function fmt(n: number): string {
-  return new Intl.NumberFormat('fr-FR').format(Math.round(n))
+  return new Intl.NumberFormat("fr-FR").format(Math.round(n));
 }
 
 function parseNum(s: string): number | undefined {
-  const n = parseFloat(s.replace(/\s/g, '').replace(',', '.'))
-  return isNaN(n) ? undefined : n
+  const n = parseFloat(s.replace(/\s/g, "").replace(",", "."));
+  return isNaN(n) ? undefined : n;
 }
 
-type Fields = typeof EXAMPLE
+type Fields = typeof EXAMPLE;
 
 function parseInput(v: Fields): ISInput | null {
-  const CA = parseNum(v.CA)
-  const charges_eligibles = parseNum(v.charges_eligibles)
-  const acomptes_payes = parseNum(v.acomptes_payes)
-  const minimum_perception = parseNum(v.minimum_perception)
-  if (CA === undefined || charges_eligibles === undefined || acomptes_payes === undefined || minimum_perception === undefined)
-    return null
-  const acompte_N = v.acompte_N.trim() ? parseNum(v.acompte_N) : undefined
-  if (v.acompte_N.trim() && acompte_N === undefined) return null
-  return { CA, charges_eligibles, acomptes_payes, minimum_perception, acompte_N }
+  const CA = parseNum(v.CA);
+  const charges_eligibles = parseNum(v.charges_eligibles);
+  const acomptes_payes = parseNum(v.acomptes_payes);
+  const minimum_perception = parseNum(v.minimum_perception);
+  if (
+    CA === undefined ||
+    charges_eligibles === undefined ||
+    acomptes_payes === undefined ||
+    minimum_perception === undefined
+  )
+    return null;
+  const acompte_N = v.acompte_N.trim() ? parseNum(v.acompte_N) : undefined;
+  if (v.acompte_N.trim() && acompte_N === undefined) return null;
+  return {
+    CA,
+    charges_eligibles,
+    acomptes_payes,
+    minimum_perception,
+    acompte_N,
+  };
 }
 
-type FieldDef = { key: keyof Fields; label: string; hint: string; optional?: boolean }
+type FieldDef = {
+  key: keyof Fields;
+  label: string;
+  hint: string;
+  optional?: boolean;
+};
 
 const FIELDS: FieldDef[] = [
-  { key: 'CA', label: "Chiffre d'affaires", hint: 'CA annuel brut en Ariary' },
-  { key: 'charges_eligibles', label: 'Charges éligibles', hint: 'Charges déductibles (réduction de 2 %)' },
-  { key: 'acomptes_payes', label: 'Acomptes payés', hint: 'Versements IS déjà effectués' },
-  { key: 'minimum_perception', label: 'Minimum légal', hint: 'Seuil min. (ex : 16 000 Ar ou 3 % du CA)' },
-  { key: 'acompte_N', label: 'Acompte N', hint: 'Vide → 5 % du CA arrondi', optional: true },
-]
+  { key: "CA", label: "Chiffre d'affaires", hint: "CA annuel brut en Ariary" },
+  {
+    key: "charges_eligibles",
+    label: "Charges éligibles",
+    hint: "Charges déductibles (réduction de 2 %)",
+  },
+  {
+    key: "acomptes_payes",
+    label: "Acomptes payés",
+    hint: "Versements IS déjà effectués",
+  },
+  {
+    key: "minimum_perception",
+    label: "Minimum légal",
+    hint: "Seuil min. (ex : 16 000 Ar ou 3 % du CA)",
+  },
+  {
+    key: "acompte_N",
+    label: "Acompte N",
+    hint: "Vide → 5 % du CA arrondi",
+    optional: true,
+  },
+];
 
 type RowProps = {
-  label: string
-  formula?: string
-  value: number
-  color?: 'default' | 'dim' | 'green' | 'amber' | 'total'
-  indent?: boolean
-}
+  label: string;
+  formula?: string;
+  value: number;
+  color?: "default" | "dim" | "green" | "amber" | "total";
+  indent?: boolean;
+};
 
-function Row({ label, formula, value, color = 'default', indent }: RowProps) {
+function Row({ label, formula, value, color = "default", indent }: RowProps) {
   const valueColor = {
-    default: 'text-zinc-900',
-    dim: 'text-zinc-500',
-    green: 'text-emerald-600',
-    amber: 'text-amber-600',
-    total: 'text-amber-500',
-  }[color]
+    default: "text-zinc-900",
+    dim: "text-zinc-500",
+    green: "text-emerald-600",
+    amber: "text-amber-600",
+    total: "text-amber-500",
+  }[color];
 
   return (
-    <div className={`flex items-baseline justify-between gap-4 py-2 ${indent ? 'pl-4 border-l border-zinc-300' : ''}`}>
+    <div
+      className={`flex items-baseline justify-between gap-4 py-2 ${indent ? "pl-4 border-l border-zinc-300" : ""}`}
+    >
       <div className="min-w-0">
         <span className="text-sm text-zinc-700">{label}</span>
         {formula && (
-          <span
-            className="ml-2 text-xs text-zinc-500 font-['IBM_Plex_Mono']"
-          >
+          <span className="ml-2 text-xs text-zinc-500 font-['IBM_Plex_Mono']">
             {formula}
           </span>
         )}
@@ -78,10 +111,16 @@ function Row({ label, formula, value, color = 'default', indent }: RowProps) {
         {fmt(value)} Ar
       </span>
     </div>
-  )
+  );
 }
 
-function BlockCard({ title, children }: { title: string; children: React.ReactNode }) {
+function BlockCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="rounded-xl bg-white border border-zinc-200 px-4 py-3">
       <div className="text-[10px] font-semibold tracking-widest uppercase text-zinc-400 mb-2">
@@ -89,39 +128,40 @@ function BlockCard({ title, children }: { title: string; children: React.ReactNo
       </div>
       <div className="divide-y divide-zinc-100">{children}</div>
     </div>
-  )
+  );
 }
 
-const LS_KEY = 'haba_is_fields'
+const LS_KEY = "haba_is_fields";
 
 export default function App() {
-  const [values, setValues] = useState<Fields>(EXAMPLE)
+  const [values, setValues] = useState<Fields>(EXAMPLE);
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(LS_KEY)
+      const stored = localStorage.getItem(LS_KEY);
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (stored) setValues({ ...EXAMPLE, ...JSON.parse(stored) })
+      if (stored) setValues({ ...EXAMPLE, ...JSON.parse(stored) });
     } catch {
       // ignore malformed localStorage data
     }
-  }, [])
+  }, []);
 
-  const input = parseInput(values)
-  const result = input ? calculerIS(input) : null
-  const minimumApplied = result ? result.IS_minimum > result.IS_apres_charges : false
+  const input = parseInput(values);
+  const result = input ? calculerIS(input) : null;
+  const minimumApplied = result
+    ? result.IS_minimum > result.IS_apres_charges
+    : false;
 
   function handleChange(key: keyof Fields, val: string) {
-    setValues(prev => {
-      const next = { ...prev, [key]: val }
-      localStorage.setItem(LS_KEY, JSON.stringify(next))
-      return next
-    })
+    setValues((prev) => {
+      const next = { ...prev, [key]: val };
+      localStorage.setItem(LS_KEY, JSON.stringify(next));
+      return next;
+    });
   }
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 px-4 py-10 md:px-8">
       <div className="max-w-5xl mx-auto">
-
         {/* Header */}
         <div className="mb-10">
           <p className="text-xs tracking-[0.2em] uppercase text-zinc-400 mb-1">
@@ -136,17 +176,19 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 items-start">
-
           {/* ── FORM PANEL ─────────────────────────── */}
           <div className="rounded-2xl bg-white border border-zinc-200 p-6 space-y-5">
             <h2 className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
               Paramètres
             </h2>
 
-            {FIELDS.map(f => (
+            {FIELDS.map((f) => (
               <div key={f.key}>
                 <div className="flex items-center justify-between mb-1">
-                  <label htmlFor={f.key} className="text-sm font-medium text-zinc-700">
+                  <label
+                    htmlFor={f.key}
+                    className="text-sm font-medium text-zinc-700"
+                  >
                     {f.label}
                   </label>
                   {f.optional && (
@@ -160,9 +202,9 @@ export default function App() {
                     id={f.key}
                     type="text"
                     inputMode="numeric"
-                    placeholder={f.optional ? 'auto' : '0'}
+                    placeholder={f.optional ? "auto" : "0"}
                     value={values[f.key]}
-                    onChange={e => handleChange(f.key, e.target.value)}
+                    onChange={(e) => handleChange(f.key, e.target.value)}
                     autoComplete="off"
                     className="w-full bg-zinc-50 border border-zinc-300 text-zinc-900 text-sm font-['IBM_Plex_Mono'] rounded-lg px-3 py-2.5 pr-10 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 placeholder:text-zinc-400 transition"
                   />
@@ -210,7 +252,11 @@ export default function App() {
 
                 {/* Réduction */}
                 <BlockCard title="Réduction pour charges éligibles">
-                  <Row label="Charges éligibles" value={input!.charges_eligibles} color="dim" />
+                  <Row
+                    label="Charges éligibles"
+                    value={input!.charges_eligibles}
+                    color="dim"
+                  />
                   <Row
                     label="Réduction"
                     formula="charges × 2 %"
@@ -228,13 +274,25 @@ export default function App() {
 
                 {/* Minimum légal */}
                 <BlockCard title="Minimum légal">
-                  <Row label="IS après charges" value={result.IS_apres_charges} color="dim" />
-                  <Row label="Minimum légal fixé" value={input!.minimum_perception} color="dim" />
+                  <Row
+                    label="IS après charges"
+                    value={result.IS_apres_charges}
+                    color="dim"
+                  />
+                  <Row
+                    label="Minimum légal fixé"
+                    value={input!.minimum_perception}
+                    color="dim"
+                  />
                   <Row
                     label="IS minimum"
-                    formula={minimumApplied ? 'max → minimum appliqué' : 'max → IS après charges retenu'}
+                    formula={
+                      minimumApplied
+                        ? "max → minimum appliqué"
+                        : "max → IS après charges retenu"
+                    }
                     value={result.IS_minimum}
-                    color={minimumApplied ? 'amber' : 'default'}
+                    color={minimumApplied ? "amber" : "default"}
                     indent
                   />
                 </BlockCard>
@@ -259,7 +317,11 @@ export default function App() {
                 <BlockCard title="Provision année N">
                   <Row
                     label="Acompte N"
-                    formula={input!.acompte_N !== undefined ? 'valeur personnalisée' : 'CA arrondi × 5 %'}
+                    formula={
+                      input!.acompte_N !== undefined
+                        ? "valeur personnalisée"
+                        : "CA arrondi × 5 %"
+                    }
                     value={result.acompte_N}
                     color="amber"
                   />
@@ -272,7 +334,9 @@ export default function App() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-zinc-700">IS solde + Acompte N</p>
+                      <p className="text-sm text-zinc-700">
+                        IS solde + Acompte N
+                      </p>
                       <p className="text-xs text-zinc-500 font-['IBM_Plex_Mono'] mt-0.5">
                         {fmt(result.IS_solde)} + {fmt(result.acompte_N)}
                       </p>
@@ -298,8 +362,25 @@ export default function App() {
         >
           Code des impôts 2025
         </a>
-        {' '}—{' '}
-        Créé avec ❤️ par{' '}
+        {" — "}
+        <a
+          href="https://github.com/heryTz/habaIS"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Source sur GitHub"
+          className="inline-flex items-center align-middle text-zinc-400 hover:text-zinc-300 transition-colors"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-4 h-4"
+          >
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.238 1.84 1.238 1.07 1.835 2.807 1.305 3.492.998.108-.776.418-1.305.762-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z" />
+          </svg>
+        </a>
+        {" — "}
+        Créé avec ❤️ par{" "}
         <a
           href="https://www.linkedin.com/in/hery-nirintsoa-0813b91a4/"
           target="_blank"
@@ -307,9 +388,10 @@ export default function App() {
           className="text-amber-500 underline underline-offset-2 hover:text-amber-400 transition-colors"
         >
           Hery Nirintsoa
-        </a>{' '}
-        — {new Date().getFullYear()}
+        </a>
+        {" — "}
+        {new Date().getFullYear()}
       </footer>
     </div>
-  )
+  );
 }
