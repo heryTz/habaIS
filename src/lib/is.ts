@@ -24,10 +24,16 @@ export function calculerIS(input: ISInput): ISResult {
   const IS_brut = CA_arrondi * 0.05
   const reduction = charges_eligibles * 0.02
   const IS_apres_charges = IS_brut - reduction
-  const IS_minimum = Math.max(IS_apres_charges, minimum_perception)
-  const IS_solde = Math.max(0, IS_minimum - acomptes_payes)
+
+  // Le minimum légal s'applique uniquement quand les acomptes couvrent déjà l'IS
+  // (situation de crédit) : IS_apres_charges - acomptes_payes <= 0
+  const IS_net = IS_apres_charges - acomptes_payes
+  const is_credit = IS_net <= 0
+
+  const IS_minimum = IS_apres_charges
+  const IS_solde = is_credit ? minimum_perception : IS_net
   const acompte_N = input.acompte_N ?? CA_arrondi * 0.05
-  const total_a_payer = IS_solde + acompte_N
+  const total_a_payer = is_credit ? IS_solde : IS_solde + acompte_N
 
   return {
     CA_arrondi,

@@ -147,8 +147,8 @@ export default function App() {
 
   const input = parseInput(values);
   const result = input ? calculerIS(input) : null;
-  const minimumApplied = result
-    ? result.IS_minimum > result.IS_apres_charges
+  const is_credit = result
+    ? result.IS_apres_charges <= input!.acomptes_payes
     : false;
 
   function handleChange(key: keyof Fields, val: string) {
@@ -280,52 +280,62 @@ export default function App() {
                     color="dim"
                   />
                   <Row
-                    label="Minimum légal fixé"
-                    value={input!.minimum_perception}
-                    color="dim"
-                  />
-                  <Row
-                    label="IS minimum"
-                    formula={
-                      minimumApplied
-                        ? "max → minimum appliqué"
-                        : "max → IS après charges retenu"
-                    }
-                    value={result.IS_minimum}
-                    color={minimumApplied ? "amber" : "default"}
-                    indent
-                  />
-                </BlockCard>
-
-                {/* Acomptes */}
-                <BlockCard title="Déduction des acomptes">
-                  <Row
                     label="Acomptes déjà payés"
                     value={input!.acomptes_payes}
-                    color="green"
+                    color="dim"
                   />
+                  <div className="py-2 flex items-center gap-2">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        is_credit
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-green-100 text-green-700"
+                      }`}
+                    >
+                      {is_credit ? "Crédit" : "Déficit"}
+                    </span>
+                    <span className="text-xs text-zinc-500">
+                      {is_credit
+                        ? "acomptes ≥ IS → minimum de perception appliqué"
+                        : "acomptes < IS → minimum non appliqué"}
+                    </span>
+                  </div>
+                  {is_credit && (
+                    <Row
+                      label="Minimum de perception"
+                      value={input!.minimum_perception}
+                      color="dim"
+                      indent
+                    />
+                  )}
                   <Row
                     label="IS solde"
-                    formula="max(0, IS minimum − acomptes)"
+                    formula={
+                      is_credit
+                        ? "minimum de perception"
+                        : "IS après charges − acomptes"
+                    }
                     value={result.IS_solde}
                     color="amber"
                     indent
                   />
                 </BlockCard>
 
-                {/* Acompte N */}
-                <BlockCard title="Provision année N">
-                  <Row
-                    label="Acompte N"
-                    formula={
-                      input!.acompte_N !== undefined
-                        ? "valeur personnalisée"
-                        : "CA arrondi × 5 %"
-                    }
-                    value={result.acompte_N}
-                    color="amber"
-                  />
-                </BlockCard>
+                {/* Acompte N — affiché uniquement en déficit */}
+                {!is_credit && (
+                  <BlockCard title="Provision année N">
+                    <Row
+                      label="Acompte N"
+                      formula={
+                        input!.acompte_N !== undefined
+                          ? "valeur personnalisée"
+                          : "CA arrondi × 5 %"
+                      }
+                      value={result.acompte_N}
+                      color="amber"
+                    />
+                  </BlockCard>
+                )}
 
                 {/* Total */}
                 <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 px-5 py-4">
@@ -334,12 +344,25 @@ export default function App() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-zinc-700">
-                        IS solde + Acompte N
-                      </p>
-                      <p className="text-xs text-zinc-500 font-['IBM_Plex_Mono'] mt-0.5">
-                        {fmt(result.IS_solde)} + {fmt(result.acompte_N)}
-                      </p>
+                      {is_credit ? (
+                        <>
+                          <p className="text-sm text-zinc-700">
+                            Minimum de perception
+                          </p>
+                          <p className="text-xs text-zinc-500 font-['IBM_Plex_Mono'] mt-0.5">
+                            crédit → {fmt(result.IS_solde)}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-zinc-700">
+                            IS solde + Acompte N
+                          </p>
+                          <p className="text-xs text-zinc-500 font-['IBM_Plex_Mono'] mt-0.5">
+                            {fmt(result.IS_solde)} + {fmt(result.acompte_N)}
+                          </p>
+                        </>
+                      )}
                     </div>
                     <span className="text-2xl font-bold font-['IBM_Plex_Mono'] tabular-nums text-amber-500">
                       {fmt(result.total_a_payer)} Ar

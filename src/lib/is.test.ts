@@ -59,38 +59,55 @@ describe('calculerIS', () => {
     })
   })
 
-  describe('minimum légal de perception', () => {
-    it('applique le minimum légal quand l\'IS après charges est inférieur', () => {
-      // IS après réduction = 50 000, minimum = 1 200 000 → utilise minimum
-      const result = calculerIS({
-        CA: 40_000_000,
-        charges_eligibles: 97_500_000, // réduction = 1 950 000 → IS = 2M - 1.95M = 50 000
-        acomptes_payes: 0,
-        minimum_perception: 1_200_000,
-      })
-      expect(result.IS_minimum).toBe(1_200_000)
-    })
-
-    it('garde l\'IS après charges quand il dépasse le minimum légal', () => {
+  describe('IS_minimum = IS_apres_charges (sans minimum légal)', () => {
+    it('IS_minimum égale IS_apres_charges', () => {
       const result = calculerIS({
         CA: 40_000_000,
         charges_eligibles: 0,
         acomptes_payes: 0,
-        minimum_perception: 16_000,
+        minimum_perception: 320_000,
       })
       expect(result.IS_minimum).toBe(2_000_000)
     })
+  })
 
-    it('accepte le minimum légal comme pourcentage du CA (3 % du CA)', () => {
-      // minimum_perception passé en valeur absolue par l'appelant
-      const minimum = Math.round(40_000_000 * 0.03) // 1 200 000
+  describe('minimum légal : appliqué uniquement en situation de crédit', () => {
+    it('situation crédit (acomptes >= IS_brut) → IS_solde = minimum_perception', () => {
+      // Case 1 : CA=4 775 000, IS_brut=238 500, acomptes=305 000 > IS_brut → crédit
       const result = calculerIS({
-        CA: 40_000_000,
-        charges_eligibles: 97_500_000,
-        acomptes_payes: 0,
-        minimum_perception: minimum,
+        CA: 4_775_000,
+        charges_eligibles: 0,
+        acomptes_payes: 305_000,
+        minimum_perception: 320_000,
       })
-      expect(result.IS_minimum).toBe(1_200_000)
+      expect(result.IS_solde).toBe(320_000)
+      expect(result.total_a_payer).toBe(320_000) // pas d'acompte_N ajouté
+    })
+
+    it('situation déficit (acomptes < IS_brut) → IS_solde = IS_brut − acomptes, minimum non appliqué', () => {
+      // Case 3 : CA=6 100 000, IS_brut=305 000, acomptes=150 000 < IS_brut → déficit
+      const result = calculerIS({
+        CA: 6_100_000,
+        charges_eligibles: 0,
+        acomptes_payes: 150_000,
+        minimum_perception: 320_000,
+      })
+      expect(result.IS_solde).toBe(155_000) // 305 000 − 150 000
+      expect(result.acompte_N).toBe(305_000) // CA × 5%
+      expect(result.total_a_payer).toBe(460_000) // 155 000 + 305 000
+    })
+
+    it('situation déficit avec IS_brut > minimum → comportement normal', () => {
+      // Case 2 : CA=8 100 000, IS_brut=405 000 > minimum=320 000, acomptes=320 000
+      const result = calculerIS({
+        CA: 8_100_000,
+        charges_eligibles: 0,
+        acomptes_payes: 320_000,
+        minimum_perception: 320_000,
+      })
+      expect(result.IS_solde).toBe(85_000)
+      expect(result.acompte_N).toBe(405_000)
+      expect(result.total_a_payer).toBe(490_000)
     })
   })
 
@@ -105,23 +122,25 @@ describe('calculerIS', () => {
       expect(result.IS_solde).toBe(1_500_000)
     })
 
-    it('ramène le solde à 0 si les acomptes dépassent l\'IS (pas de remboursement)', () => {
+    it('applique le minimum en situation de crédit', () => {
       const result = calculerIS({
         CA: 40_000_000,
         charges_eligibles: 0,
         acomptes_payes: 5_000_000,
         minimum_perception: 16_000,
       })
-      expect(result.IS_solde).toBe(0)
+      // IS_brut=2M, acomptes=5M > IS_brut → crédit → IS_solde = minimum = 16 000
+      expect(result.IS_solde).toBe(16_000)
+      expect(result.total_a_payer).toBe(16_000)
     })
   })
 
-  describe('acompte pour l\'année N', () => {
-    it('calcule 5 % du CA arrondi comme acompte N', () => {
+  describe('acompte pour l\'année N (CA × 5 %)', () => {
+    it('calcule 5 % du CA arrondi comme acompte N en situation de déficit', () => {
       const result = calculerIS({
         CA: 40_000_000,
         charges_eligibles: 0,
-        acomptes_payes: 0,
+        acomptes_payes: 500_000,
         minimum_perception: 16_000,
       })
       expect(result.acompte_N).toBe(2_000_000)
@@ -140,26 +159,26 @@ describe('calculerIS', () => {
   })
 
   describe('total à payer', () => {
-    it('additionne le solde IS et l\'acompte N', () => {
+    it('déficit : IS_solde + acompte_N', () => {
       const result = calculerIS({
         CA: 40_000_000,
         charges_eligibles: 0,
         acomptes_payes: 500_000,
         minimum_perception: 16_000,
       })
-      // IS_minimum=2M, solde=1.5M, acompte_N=2M → total=3.5M
+      // IS_brut=2M, IS_solde=1.5M, acompte_N=2M → total=3.5M
       expect(result.total_a_payer).toBe(3_500_000)
     })
 
-    it('total ne peut pas être négatif quand solde est 0', () => {
+    it('crédit : total = minimum_perception uniquement', () => {
       const result = calculerIS({
         CA: 40_000_000,
         charges_eligibles: 0,
         acomptes_payes: 5_000_000,
         minimum_perception: 16_000,
       })
-      // IS_solde=0, acompte_N=2M → total=2M
-      expect(result.total_a_payer).toBe(2_000_000)
+      // IS_brut=2M < acomptes=5M → crédit → total = minimum = 16 000
+      expect(result.total_a_payer).toBe(16_000)
     })
   })
 
@@ -169,14 +188,14 @@ describe('calculerIS', () => {
         CA: 40_000_000,
         charges_eligibles: 1_950_000,
         acomptes_payes: 700_000,
-        minimum_perception: 1_200_000, // max(16 000, 3 % de 40M = 1 200 000)
+        minimum_perception: 1_200_000,
       })
       expect(result.CA_arrondi).toBe(40_000_000)
       expect(result.IS_brut).toBe(2_000_000)
       expect(result.reduction).toBe(39_000)
       expect(result.IS_apres_charges).toBe(1_961_000)
-      expect(result.IS_minimum).toBe(1_961_000) // 1 961 000 > 1 200 000
-      expect(result.IS_solde).toBe(1_261_000)
+      expect(result.IS_minimum).toBe(1_961_000)
+      expect(result.IS_solde).toBe(1_261_000) // 1_961_000 - 700_000 (déficit)
       expect(result.acompte_N).toBe(2_000_000)
       expect(result.total_a_payer).toBe(3_261_000)
     })
